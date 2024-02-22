@@ -1,6 +1,9 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:native_opencv/native_opencv.dart';
 import 'calibration3.dart';
 import 'failedcalibration.dart';
 import 'package:himo/myappbar.dart';
@@ -14,9 +17,12 @@ class Calibration2 extends StatefulWidget {
 
 class _Calibration2State extends State<Calibration2> {
 
+  final nativeOpencv = NativeOpencv();
+
   @override
   void initState(){
     super.initState();
+    log('---> OpenCV version: ${nativeOpencv.cvVersion()}');
     _navigateToNextScreen();
   }
 
