@@ -32,6 +32,7 @@ dependencies:
     sdk: flutter
   native_opencv:
     path: ../native_opencv_plugin/native_opencv
+  image_picker: ^0.8.4+4
   #flutter_native_splash: ^2.3.1
 
   # The following adds the Cupertino Icons font to your application.
