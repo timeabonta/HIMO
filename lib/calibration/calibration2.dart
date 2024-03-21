@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:native_opencv/native_opencv.dart';
+import 'package:himo/calibration/calibration3.dart';
+import 'package:himo/calibration/failedcalibration.dart';
 
 class Calibration2 extends StatefulWidget {
   const Calibration2({Key? key}) : super(key: key);
@@ -12,17 +14,18 @@ class Calibration2 extends StatefulWidget {
 }
 
 class _Calibration2State extends State<Calibration2> {
-  File? _imageFile;
+  List<File>? _imageFiles;
 
   void _getImage() async {
     final pickedFile = await ImagePicker().getImage(source: ImageSource.gallery);
     if (pickedFile != null) {
       File imageFile = File(pickedFile.path);
-      String result = await NativeOpencv.processImage(imageFile.path);
-      print(result);
-      setState(() {
-        _imageFile = imageFile;
-      });
+      List<File>? processedFiles = await NativeOpencv.detectAndFrameObjects(imageFile.path);
+      if (processedFiles != null && processedFiles.isNotEmpty) {
+        Navigator.push(context, MaterialPageRoute(builder: (context) => Calibration3(imageFiles: processedFiles)));
+      } else {
+        Navigator.push(context, MaterialPageRoute(builder: (context) => FailedCalibration()));
+      }
     }
   }
 
@@ -33,8 +36,10 @@ class _Calibration2State extends State<Calibration2> {
         title: Text('Calibration'),
       ),
       body: Center(
-        child: _imageFile != null
-            ? Image.file(_imageFile!)
+        child: _imageFiles != null
+            ? Column(
+          children: _imageFiles!.map((file) => Image.file(file)).toList(),
+        )
             : Text('No image selected'),
       ),
       floatingActionButton: FloatingActionButton(
