@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'exerciseprovider.dart';
 
 class CustomAppBarExerciseSetup extends StatelessWidget implements PreferredSizeWidget {
   final String title;
@@ -80,6 +81,8 @@ class CustomAppBarExerciseSetup extends StatelessWidget implements PreferredSize
               isSelected: [!isCustomSelected, isCustomSelected],
               onPressed: (int index) {
                 onToggle(index == 1);
+                String selectedTherapy = index == 1 ? therapyCustom : therapyDefault;
+                saveSelectedTherapy(selectedTherapy);
               },
               color: Colors.white,
               selectedColor: Colors.black,

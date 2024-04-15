@@ -33,6 +33,7 @@ class _ExerciseSetupState extends State<ExerciseSetup> {
     loadDefaultExercises().then((loadedDefaultExercises) {
       logExercises(loadedDefaultExercises, "Default Exercises");
     });
+    _loadSelectedTherapy();
   }
 
   void logExercises(List<Exercise> exercises, String listName) {
@@ -49,6 +50,15 @@ class _ExerciseSetupState extends State<ExerciseSetup> {
       selectedRepetition = lastRepetition;
     });
   }
+
+  void _loadSelectedTherapy() async {
+    String selectedTherapy = await loadSelectedTherapy();
+    developer.log('Selected Therapy: $selectedTherapy');
+    setState(() {
+      isCustomSelected = selectedTherapy == therapyCustom;
+    });
+  }
+
 
   @override
   Widget build(BuildContext context) {

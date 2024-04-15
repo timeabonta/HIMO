@@ -24,6 +24,10 @@ class Exercise {
   );
 }
 
+const String prefSelectedTherapy = 'selectedTherapy';
+const String therapyDefault = 'default';
+const String therapyCustom = 'custom';
+
 Future<void> saveExercises(List<Exercise> exercises) async {
   final SharedPreferences prefs = await SharedPreferences.getInstance();
   List<String> jsonExercises = exercises.map((exercise) => json.encode(exercise.toJson())).toList();
@@ -56,4 +60,15 @@ List<Exercise> getDefaultExercises(int repetition) {
     Exercise(name: 'Time', repetitions: repetition * 3, imagePath: 'lib/images/time.png', isTime: true),
     Exercise(name: 'Toe Stand', repetitions: repetition * 3, imagePath: 'lib/images/toestand.png', isTime: true),
   ];
+}
+
+
+Future<void> saveSelectedTherapy(String therapy) async {
+  final SharedPreferences prefs = await SharedPreferences.getInstance();
+  await prefs.setString(prefSelectedTherapy, therapy);
+}
+
+Future<String> loadSelectedTherapy() async {
+  final SharedPreferences prefs = await SharedPreferences.getInstance();
+  return prefs.getString(prefSelectedTherapy) ?? therapyDefault;
 }
