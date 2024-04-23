@@ -17,12 +17,12 @@ class _Calibration2State extends State<Calibration2> {
   List<File>? _imageFiles;
 
   void _getImage() async {
-    final pickedFile = await ImagePicker().getImage(source: ImageSource.gallery);
+    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
       File imageFile = File(pickedFile.path);
-      List<File>? processedFiles = await NativeOpencv.detectAndFrameObjects(imageFile.path);
-      if (processedFiles != null && processedFiles.isNotEmpty) {
-        Navigator.push(context, MaterialPageRoute(builder: (context) => Calibration3(imageFiles: processedFiles)));
+      List<DetectedObject>? detectedObjects = await NativeOpencv.detectAndFrameObjects(imageFile.path);
+      if (detectedObjects != null && detectedObjects.isNotEmpty) {
+        Navigator.push(context, MaterialPageRoute(builder: (context) => Calibration3(detectedObjects: detectedObjects)));
       } else {
         Navigator.push(context, MaterialPageRoute(builder: (context) => FailedCalibration()));
       }

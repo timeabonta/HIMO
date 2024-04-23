@@ -3,15 +3,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:himo/myappbar.dart';
+import 'package:native_opencv/native_opencv.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 
 class Calibration3 extends StatefulWidget {
-  final List<File> imageFiles;
+  final List<DetectedObject> detectedObjects;
 
-  const Calibration3({Key? key, required this.imageFiles}) : super(key: key);
+  const Calibration3({Key? key, required this.detectedObjects}) : super(key: key);
 
   @override
-  State<Calibration3> createState() => _Calibration3State();
+  _Calibration3State createState() => _Calibration3State();
 }
 
 class _Calibration3State extends State<Calibration3> {
@@ -20,7 +22,13 @@ class _Calibration3State extends State<Calibration3> {
   @override
   void initState() {
     super.initState();
-    _isSelected = List.generate(widget.imageFiles.length, (_) => false);
+    _isSelected = List.generate(widget.detectedObjects.length, (_) => false);
+  }
+
+  Future<void> _saveSelectedHue(int hue) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('selectedHue', hue);
+    print("Elmentett hue: $hue");
   }
 
   @override
@@ -62,28 +70,20 @@ class _Calibration3State extends State<Calibration3> {
                 ),
               ),
             ),
-            for (int i = 0; i < widget.imageFiles.length; i++)
-              _buildSelectableImage(widget.imageFiles[i], _isSelected[i], () {
+            for (int i = 0; i < widget.detectedObjects.length; i++)
+              _buildSelectableImage(widget.detectedObjects[i].imageFile, _isSelected[i], () {
                 setState(() {
                   for (int j = 0; j < _isSelected.length; j++) {
                     _isSelected[j] = i == j;
                   }
                 });
-                Future.delayed(Duration(seconds: 1), () {
+                Future.delayed(Duration(seconds: 1), () async {
+                  int selectedHue = widget.detectedObjects[i].dominantHue;
+                  await _saveSelectedHue(selectedHue);
+                  print("Kiválasztott kép domináns színe: $selectedHue");
                   Navigator.of(context).popUntil((route) => route.isFirst);
                 });
               }),
-            if (widget.imageFiles.isEmpty)
-              Padding(
-                padding: EdgeInsets.symmetric(vertical: 20.h),
-                child: Text(
-                  'No images to display.',
-                  style: GoogleFonts.varelaRound(
-                    color: Colors.white,
-                    fontSize: 16.sp,
-                  ),
-                ),
-              ),
           ],
         ),
       ),
