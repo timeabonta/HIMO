@@ -1,6 +1,7 @@
 import 'dart:isolate';
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:typed_data';
 import 'dart:async';
 import 'colordetector.dart' as color_detector;

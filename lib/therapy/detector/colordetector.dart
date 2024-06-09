@@ -8,7 +8,9 @@ import 'package:native_opencv/native_opencv.dart';
 // This class will be used as argument to the init method
 class InitRequest {
   SendPort toMainThread;
-  InitRequest({required this.toMainThread});
+
+  var initialHue;
+  InitRequest({required this.toMainThread, this.initialHue = 0});
 }
 
 // this is the class that the main thread will send here asking to invoke a function on ColorDetector
@@ -32,7 +34,7 @@ late SendPort _toMainThread;
 late _ColorDetector _detector;
 
 void init(InitRequest initReq) {
-  _detector = _ColorDetector();
+  _detector = _ColorDetector(initialHue: initReq.initialHue);
   log("XXX Init");
 
   // Save the port on which we will send messages to the main thread
@@ -61,22 +63,22 @@ void _handleMessage(data) {
       default:
         log('Unknown method: ${data.method}');
     }
-
     _toMainThread.send(Response(reqId: data.reqId, data: res));
   }
 }
 
 class _ColorDetector {
   NativeOpencv? _nativeOpencv;
+  int _initialHue;
 
-  _ColorDetector(){
+  _ColorDetector({int initialHue = 0}) : _initialHue = initialHue {
     init();
   }
 
   init() async {
 
     _nativeOpencv = NativeOpencv();
-    _nativeOpencv!.initDetector(179, 10);
+    _nativeOpencv!.initDetector(_initialHue, 10);
 
     log("XXX Initialized");
   }
@@ -102,7 +104,7 @@ class _ColorDetector {
     }
 
     var res = _nativeOpencv!.detect(image.width, image.height, rotation, yBuffer, uBuffer, vBuffer);
-    log('Eredmeny: $res');
+    //log('Eredmeny: $res');
     return res;
   }
 
