@@ -4,6 +4,7 @@ import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
+import '../exercisesetup/exerciseprovider.dart';
 import 'detection/detectionlayer.dart';
 import 'detector/colordetector.dart' as color_detector;
 import 'detector/colordetectorasync.dart';
@@ -33,14 +34,11 @@ class _TherapyState extends State<Therapy> with WidgetsBindingObserver{
   Timer? analysisTimer;
   MovementInfo currentMovement = MovementInfo(MovementState.idle, DateTime.now());
 
-  Future<void> _playAudio(String fileName) async {
-    try {
-      await _audioPlayer.setSource(AssetSource(fileName));
-      await _audioPlayer.play(AssetSource(fileName));
-    } catch (e) {
-      print('Error playing audio: $e');
-    }
-  }
+  int _countdown = 17;
+  Timer? _countdownTimer;
+  bool _countdownComplete = false;
+  List<Exercise> _exercises = [];
+  int _currentExerciseIndex = 0;
 
   @override
   void initState(){
@@ -48,7 +46,8 @@ class _TherapyState extends State<Therapy> with WidgetsBindingObserver{
     WidgetsBinding.instance?.addObserver(this);
     _colorDetector = ColorDetectorAsync();
     initCamera();
-    _playAudio('ToeRising1.mp3');
+    startCountdown();
+    loadSelectedExercises();
   }
 
   @override
@@ -72,11 +71,46 @@ class _TherapyState extends State<Therapy> with WidgetsBindingObserver{
     _colorDetector.destroy();
     _camController?.dispose();
     analysisTimer?.cancel();
+    _countdownTimer?.cancel();
     super.dispose();
   }
 
+  Future<void> _playAudio(String fileName) async {
+    try {
+      await _audioPlayer.setSource(AssetSource(fileName));
+      await _audioPlayer.play(AssetSource(fileName));
+    } catch (e) {
+      print('Error playing audio: $e');
+    }
+  }
+
+  void startCountdown() {
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_countdown == 0) {
+        setState(() {
+          _countdownComplete = true;
+        });
+        _countdownTimer?.cancel();
+        _playAudio('ToeRising1.mp3');
+      } else {
+        setState(() {
+          _countdown--;
+        });
+      }
+    });
+  }
+
+  Future<void> loadSelectedExercises() async {
+    String selectedTherapy = await loadSelectedTherapy();
+    if (selectedTherapy == therapyDefault) {
+      _exercises = await loadDefaultExercises();
+    } else {
+      _exercises = await loadExercises();
+    }
+  }
+
   void analyzeMovements() {
-    if (boundingBoxHistory.length < 2) return;
+    if (!_countdownComplete || boundingBoxHistory.length < 2) return;
 
     var previous = boundingBoxHistory[boundingBoxHistory.length - 2];
     var current = boundingBoxHistory.last;
@@ -273,6 +307,21 @@ class _TherapyState extends State<Therapy> with WidgetsBindingObserver{
         DetectionsLayer(
           boundingBoxes: _foot,
         ),
+        if (!_countdownComplete)
+          Center(
+            child: Container(
+              color: Colors.transparent,
+              child: Text(
+                '$_countdown',
+                style: TextStyle(
+                  fontSize: 100,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey.withOpacity(0.7),
+                  decoration: TextDecoration.none
+                ),
+              ),
+            ),
+          ),
       ],
     );
   }
