@@ -72,6 +72,11 @@ flutter:
   assets:
      - lib/images/
      - assets/ToeRising1.mp3
+     - assets/CalfRaises.mp3
+     - assets/3.mp3
+     - assets/5.mp3
+     - assets/8.mp3
+     - assets/correct.mp3
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see

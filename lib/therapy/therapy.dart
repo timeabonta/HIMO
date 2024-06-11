@@ -39,6 +39,9 @@ class _TherapyState extends State<Therapy> with WidgetsBindingObserver{
   bool _countdownComplete = false;
   List<Exercise> _exercises = [];
   int _currentExerciseIndex = 0;
+  int _currentRepetitionCount = 0;
+  bool _exerciseAnnounced = false;
+  bool _secondAudioPlayed = false;
 
   @override
   void initState(){
@@ -46,8 +49,8 @@ class _TherapyState extends State<Therapy> with WidgetsBindingObserver{
     WidgetsBinding.instance?.addObserver(this);
     _colorDetector = ColorDetectorAsync();
     initCamera();
-    startCountdown();
     loadSelectedExercises();
+    startCountdown();
   }
 
   @override
@@ -72,6 +75,7 @@ class _TherapyState extends State<Therapy> with WidgetsBindingObserver{
     _camController?.dispose();
     analysisTimer?.cancel();
     _countdownTimer?.cancel();
+    _audioPlayer.dispose();
     super.dispose();
   }
 
@@ -79,6 +83,36 @@ class _TherapyState extends State<Therapy> with WidgetsBindingObserver{
     try {
       await _audioPlayer.setSource(AssetSource(fileName));
       await _audioPlayer.play(AssetSource(fileName));
+      _audioPlayer.onPlayerComplete.listen((event) {
+        _audioPlayer.release();
+      });
+    } catch (e) {
+      print('Error playing audio: $e');
+    }
+  }
+
+  Future<void> _announceExercise(Exercise exercise) async {
+    String announcement = 'Következő gyakorlat: ${exercise.name}, ${exercise.repetitions} ismétlés';
+    print(announcement);
+    _secondAudioPlayed = false;
+    await _playAudioWithCompletion('${exercise.name}.mp3', () async {
+      if (!_secondAudioPlayed) {
+        await _playAudio('${exercise.repetitions}.mp3');
+        _secondAudioPlayed = true;
+      }
+      _exerciseAnnounced = true;
+    });
+  }
+
+
+  Future<void> _playAudioWithCompletion(String fileName, VoidCallback onComplete) async {
+    try {
+      await _audioPlayer.setSource(AssetSource(fileName));
+      await _audioPlayer.play(AssetSource(fileName));
+      _audioPlayer.onPlayerComplete.listen((event) {
+        onComplete();
+        _audioPlayer.release();
+      });
     } catch (e) {
       print('Error playing audio: $e');
     }
@@ -91,7 +125,9 @@ class _TherapyState extends State<Therapy> with WidgetsBindingObserver{
           _countdownComplete = true;
         });
         _countdownTimer?.cancel();
-        _playAudio('ToeRising1.mp3');
+        if (_exercises.isNotEmpty) {
+          _announceExercise(_exercises[_currentExerciseIndex]);
+        }
       } else {
         setState(() {
           _countdown--;
@@ -107,10 +143,13 @@ class _TherapyState extends State<Therapy> with WidgetsBindingObserver{
     } else {
       _exercises = await loadExercises();
     }
+    setState(() {
+      _currentExerciseIndex = 0;
+    });
   }
 
   void analyzeMovements() {
-    if (!_countdownComplete || boundingBoxHistory.length < 2) return;
+    if (!_countdownComplete || boundingBoxHistory.length < 2 || !_exerciseAnnounced) return;
 
     var previous = boundingBoxHistory[boundingBoxHistory.length - 2];
     var current = boundingBoxHistory.last;
@@ -158,6 +197,24 @@ class _TherapyState extends State<Therapy> with WidgetsBindingObserver{
         if ((heightChangeRate).abs() < 0.05) {
           currentMovement.setState(MovementState.waitingNextMovement);
           print("Készen áll a következő mozgás érzékelésére");
+          _playAudio('correct.mp3');
+          _currentRepetitionCount++;
+          if (_currentRepetitionCount >= _exercises[_currentExerciseIndex].repetitions) {
+            _currentRepetitionCount = 0;
+            _currentExerciseIndex++;
+            if (_currentExerciseIndex < _exercises.length) {
+              _exerciseAnnounced = false;
+              print("Aktuális gyakorlat vége");
+              Future.delayed(Duration(seconds: 3), () {
+                _announceExercise(_exercises[_currentExerciseIndex]);
+              });
+            } else {
+              print("Az összes gyakorlat befejeződött");
+              _exerciseAnnounced = false;
+              boundingBoxHistory.clear();
+              return;
+            }
+          }
         }
         break;
       case MovementState.waitingNextMovement:
@@ -282,7 +339,9 @@ class _TherapyState extends State<Therapy> with WidgetsBindingObserver{
     // }
 
     boundingBoxHistory.add(BoundingBoxData(DateTime.now(), foot));
-    analyzeMovements();
+    if(_exerciseAnnounced){
+      analyzeMovements();
+    }
 
     setState(() {
       _foot = foot;

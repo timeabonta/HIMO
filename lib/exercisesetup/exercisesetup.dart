@@ -90,9 +90,9 @@ class _ExerciseSetupState extends State<ExerciseSetup> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _buildDraggableWidget(Exercise(name: 'Calf Raises', repetitions: 5, imagePath: 'lib/images/calfraises.png', isTime: false,)),
-              _buildDraggableWidget(Exercise(name: 'Toe Stand', repetitions: 5, imagePath: 'lib/images/toestand.png', isTime: true,)),
-              _buildDraggableWidget(Exercise(name: 'Toe Curls', repetitions: 5, imagePath: 'lib/images/toecurls.png', isTime: false,)),
+              _buildDraggableWidget(Exercise(name: 'CalfRaises', repetitions: 5, imagePath: 'lib/images/calfraises.png', isTime: false,)),
+              _buildDraggableWidget(Exercise(name: 'ToeStand', repetitions: 5, imagePath: 'lib/images/toestand.png', isTime: true,)),
+              _buildDraggableWidget(Exercise(name: 'ToeCurls', repetitions: 5, imagePath: 'lib/images/toecurls.png', isTime: false,)),
               _buildDraggableWidget(Exercise(name: 'Time', repetitions: 10, imagePath: 'lib/images/time.png', isTime: true,)),
             ],
           ),

@@ -54,11 +54,11 @@ Future<List<Exercise>> loadDefaultExercises() async {
 
 List<Exercise> getDefaultExercises(int repetition) {
   return [
-    Exercise(name: 'Calf Raises', repetitions: repetition, imagePath: 'lib/images/calfraises.png', isTime: false),
+    Exercise(name: 'CalfRaises', repetitions: repetition, imagePath: 'lib/images/calfraises.png', isTime: false),
     Exercise(name: 'Time', repetitions: repetition * 3, imagePath: 'lib/images/time.png', isTime: true),
-    Exercise(name: 'Toe Curls', repetitions: repetition, imagePath: 'lib/images/toecurls.png', isTime: false),
+    Exercise(name: 'ToeCurls', repetitions: repetition, imagePath: 'lib/images/toecurls.png', isTime: false),
     Exercise(name: 'Time', repetitions: repetition * 3, imagePath: 'lib/images/time.png', isTime: true),
-    Exercise(name: 'Toe Stand', repetitions: repetition * 3, imagePath: 'lib/images/toestand.png', isTime: true),
+    Exercise(name: 'ToeStand', repetitions: repetition * 3, imagePath: 'lib/images/toestand.png', isTime: true),
   ];
 }
 
