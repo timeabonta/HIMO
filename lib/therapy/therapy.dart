@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
+import 'package:himo/therapy/therapyend.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 import '../exercisesetup/exerciseprovider.dart';
@@ -34,12 +35,14 @@ class _TherapyState extends State<Therapy> with WidgetsBindingObserver{
   Timer? analysisTimer;
   MovementInfo currentMovement = MovementInfo(MovementState.idle, DateTime.now());
 
-  int _countdown = 17;
+  int _countdown = 15;
   Timer? _countdownTimer;
   bool _countdownComplete = false;
   List<Exercise> _exercises = [];
   int _currentExerciseIndex = 0;
   int _currentRepetitionCount = 0;
+  int _currentHoldDuration = 0;
+  int _remainedHoldDuration = 0;
   bool _exerciseAnnounced = false;
   bool _secondAudioPlayed = false;
 
@@ -81,7 +84,9 @@ class _TherapyState extends State<Therapy> with WidgetsBindingObserver{
 
   Future<void> _playAudio(String fileName) async {
     try {
-      await _audioPlayer.setSource(AssetSource(fileName));
+      await _audioPlayer.stop();
+      await _audioPlayer.release();
+      //await _audioPlayer.setSource(AssetSource(fileName));
       await _audioPlayer.play(AssetSource(fileName));
       _audioPlayer.onPlayerComplete.listen((event) {
         _audioPlayer.release();
@@ -95,19 +100,58 @@ class _TherapyState extends State<Therapy> with WidgetsBindingObserver{
     String announcement = 'Következő gyakorlat: ${exercise.name}, ${exercise.repetitions} ismétlés';
     print(announcement);
     _secondAudioPlayed = false;
-    await _playAudioWithCompletion('${exercise.name}.mp3', () async {
-      if (!_secondAudioPlayed) {
-        await _playAudio('${exercise.repetitions}.mp3');
-        _secondAudioPlayed = true;
-      }
-      _exerciseAnnounced = true;
-    });
+    if(exercise.name == "ToeStand"){
+      _remainedHoldDuration = _exercises[_currentExerciseIndex].repetitions;
+    }
+    if(exercise.name == "Time"){
+      await _playAudioWithCompletion('${exercise.name}.mp3', () async {
+        if (!_secondAudioPlayed) {
+          await _playAudio('${exercise.repetitions}s.mp3');
+          _secondAudioPlayed = true;
+        }
+      });
+      Future.delayed(Duration(seconds: exercise.repetitions), () {
+        _currentRepetitionCount = 0;
+        _currentExerciseIndex++;
+        if (_currentExerciseIndex < _exercises.length) {
+          Future.delayed(Duration(seconds: 3), () {
+            _announceExercise(_exercises[_currentExerciseIndex]);
+          });
+        } else {
+          print("Az összes gyakorlat befejeződött");
+          _exerciseAnnounced = false;
+          boundingBoxHistory.clear();
+          Future.delayed(Duration(seconds: 3), () {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => TherapyEnd()),
+            );
+          });
+        }
+      });
+    }
+    else{
+      await _playAudioWithCompletion('${exercise.name}.mp3', () async {
+        if (!_secondAudioPlayed) {
+          if(exercise.isTime){
+            await _playAudio('${exercise.repetitions}s.mp3');
+          }
+          else{
+            await _playAudio('${exercise.repetitions}.mp3');
+          }
+          _secondAudioPlayed = true;
+        }
+        _exerciseAnnounced = true;
+      });
+    }
   }
 
 
   Future<void> _playAudioWithCompletion(String fileName, VoidCallback onComplete) async {
     try {
-      await _audioPlayer.setSource(AssetSource(fileName));
+      await _audioPlayer.stop();
+      await _audioPlayer.release();
+      //await _audioPlayer.setSource(AssetSource(fileName));
       await _audioPlayer.play(AssetSource(fileName));
       _audioPlayer.onPlayerComplete.listen((event) {
         onComplete();
@@ -158,8 +202,8 @@ class _TherapyState extends State<Therapy> with WidgetsBindingObserver{
     var timeDiff = current.timestamp.difference(previous.timestamp).inMilliseconds;
 
     // Szélesség és magasság változása a két bounding box között
-    double widthChange = (current.boundingBox[2] - current.boundingBox[0]) - (previous.boundingBox[2] - previous.boundingBox[0]);
-    double heightChange = (current.boundingBox[3] - current.boundingBox[1]) - (previous.boundingBox[3] - previous.boundingBox[1]);
+    double widthChange = (current.boundingBox[2] - current.boundingBox[0]).abs() - (previous.boundingBox[2] - previous.boundingBox[0]).abs();
+    double heightChange = (current.boundingBox[3] - current.boundingBox[1]).abs() - (previous.boundingBox[3] - previous.boundingBox[1]).abs();
 
     // A változás sebessége, amit a magasság és a szélesség változásából számolunk, időegységre normálva
     double heightChangeRate = heightChange / timeDiff;
@@ -176,10 +220,10 @@ class _TherapyState extends State<Therapy> with WidgetsBindingObserver{
     // Állapotgép logika a mozgás típusának azonosítására
     switch (currentMovement.state) {
       case MovementState.idle:
-        if (heightChange > 10 && heightChangeRate > 0.1) {
+        if (heightChange > 10 && heightChangeRate > 0.3) {
           currentMovement.setState(MovementState.toeRising);
           print("Lábujjhegyre állás kezdete");
-        } else if (widthChange < -10 && widthChangeRate < -0.1) {
+        } else if (widthChange < -5 && widthChangeRate < -0.05 && (heightChangeRate).abs() < 0.05) {
           currentMovement.setState(MovementState.toesContracting);
           print("Lábujjhegyek behúzása");
         }
@@ -197,28 +241,11 @@ class _TherapyState extends State<Therapy> with WidgetsBindingObserver{
         if ((heightChangeRate).abs() < 0.05) {
           currentMovement.setState(MovementState.waitingNextMovement);
           print("Készen áll a következő mozgás érzékelésére");
-          _playAudio('correct.mp3');
-          _currentRepetitionCount++;
-          if (_currentRepetitionCount >= _exercises[_currentExerciseIndex].repetitions) {
-            _currentRepetitionCount = 0;
-            _currentExerciseIndex++;
-            if (_currentExerciseIndex < _exercises.length) {
-              _exerciseAnnounced = false;
-              print("Aktuális gyakorlat vége");
-              Future.delayed(Duration(seconds: 3), () {
-                _announceExercise(_exercises[_currentExerciseIndex]);
-              });
-            } else {
-              print("Az összes gyakorlat befejeződött");
-              _exerciseAnnounced = false;
-              boundingBoxHistory.clear();
-              return;
-            }
-          }
+          handleRepetitionCompletion("CalfRaises");
         }
         break;
       case MovementState.waitingNextMovement:
-        if (DateTime.now().difference(currentMovement.lastTransition).inMilliseconds > 500) {
+        if (DateTime.now().difference(currentMovement.lastTransition).inMilliseconds > 100) {
           currentMovement.setState(MovementState.idle);
           boundingBoxHistory.clear();
           print("Állapot visszaállítása, újra kész a detektálásra");
@@ -228,12 +255,44 @@ class _TherapyState extends State<Therapy> with WidgetsBindingObserver{
         if (heightChange < -10 && heightChangeRate < -0.1) {
           currentMovement.setState(MovementState.toeFalling);
           print("Lábujjhegy állás vége, visszatérés a talajra");
+          if(_exercises[_currentExerciseIndex].name == "ToeStand"){
+            if (_currentHoldDuration < _remainedHoldDuration){
+              _remainedHoldDuration -= _currentHoldDuration;
+              _playAudio("keepgoing.mp3");
+            }
+          }
         } else {
           print("Lábujjhegyen maradva: ${currentMovement.toeHoldDuration().inSeconds} másodperc");
+          if(_exercises[_currentExerciseIndex].name == "ToeStand"){
+            _currentHoldDuration = currentMovement.toeHoldDuration().inSeconds;
+            if (_currentHoldDuration >= _remainedHoldDuration) {
+              _playAudio("finished.mp3");
+              _currentRepetitionCount = 0;
+              _currentHoldDuration = 0;
+              _currentExerciseIndex++;
+              if (_currentExerciseIndex < _exercises.length) {
+                _exerciseAnnounced = false;
+                print("ToeStand gyakorlat vége");
+                Future.delayed(Duration(seconds: 3), () {
+                  _announceExercise(_exercises[_currentExerciseIndex]);
+                });
+              } else {
+                print("Az összes gyakorlat befejeződött");
+                _exerciseAnnounced = false;
+                boundingBoxHistory.clear();
+                Future.delayed(Duration(seconds: 3), () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (context) => TherapyEnd()),
+                  );
+                });
+              }
+            }
+          }
         }
         break;
       case MovementState.toesContracting:
-        if (widthChange > 10 && widthChangeRate > 0.1) {
+        if (widthChange > 5 && widthChangeRate > 0.05) {
           currentMovement.setState(MovementState.toesExpanding);
           print("Lábujjhegyek behúzás vége, visszatérés az eredeti pozícióra");
         }
@@ -242,6 +301,7 @@ class _TherapyState extends State<Therapy> with WidgetsBindingObserver{
         if ((widthChangeRate).abs() < 0.05) {
           currentMovement.setState(MovementState.waitingNextMovement);
           print("Készen áll a következő mozgás érzékelésére");
+          handleRepetitionCompletion("ToeCurls");
         }
         break;
       default:
@@ -249,7 +309,38 @@ class _TherapyState extends State<Therapy> with WidgetsBindingObserver{
     }
   }
 
-
+  void handleRepetitionCompletion(String exerciseName) {
+    if(_exercises[_currentExerciseIndex].name == exerciseName){
+      if(_currentRepetitionCount == _exercises[_currentExerciseIndex].repetitions - 1){
+        _playAudio('finished.mp3');
+      }
+      else{
+        _playAudio('correct.mp3');
+      }
+      _currentRepetitionCount++;
+      if (_currentRepetitionCount >= _exercises[_currentExerciseIndex].repetitions) {
+        _currentRepetitionCount = 0;
+        _currentExerciseIndex++;
+        if (_currentExerciseIndex < _exercises.length) {
+          _exerciseAnnounced = false;
+          print("$exerciseName gyakorlat vége");
+          Future.delayed(Duration(seconds: 3), () {
+            _announceExercise(_exercises[_currentExerciseIndex]);
+          });
+        } else {
+          print("Az összes gyakorlat befejeződött");
+          _exerciseAnnounced = false;
+          boundingBoxHistory.clear();
+          Future.delayed(Duration(seconds: 3), () {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => TherapyEnd()),
+            );
+          });
+        }
+      }
+    }
+  }
 
   Future<void> initCamera() async {
     final cameras = await availableCameras();
