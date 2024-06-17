@@ -31,6 +31,11 @@ class _Calibration3State extends State<Calibration3> {
     print("Elmentett hue: $hue");
   }
 
+  Future<void> _saveSelectedImage(String imagePath) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('selectedImage', imagePath);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -79,7 +84,9 @@ class _Calibration3State extends State<Calibration3> {
                 });
                 Future.delayed(Duration(seconds: 1), () async {
                   int selectedHue = widget.detectedObjects[i].dominantHue;
+                  String imagePath = widget.detectedObjects[i].imageFile.path;
                   await _saveSelectedHue(selectedHue);
+                  await _saveSelectedImage(imagePath);
                   print("Kiválasztott kép domináns színe: $selectedHue");
                   Navigator.of(context).popUntil((route) => route.isFirst);
                 });

@@ -182,12 +182,20 @@ class _TherapyState extends State<Therapy> with WidgetsBindingObserver{
 
   Future<void> loadSelectedExercises() async {
     String selectedTherapy = await loadSelectedTherapy();
+    List<Exercise> exercisesLoaded;
+
     if (selectedTherapy == therapyDefault) {
-      _exercises = await loadDefaultExercises();
+      exercisesLoaded = await loadDefaultExercises();
     } else {
-      _exercises = await loadExercises();
+      exercisesLoaded = await loadExercises();
     }
+
+    if (exercisesLoaded.isEmpty) {
+      exercisesLoaded = await loadDefaultExercises();
+    }
+
     setState(() {
+      _exercises = exercisesLoaded;
       _currentExerciseIndex = 0;
     });
   }

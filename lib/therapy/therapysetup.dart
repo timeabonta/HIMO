@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -5,6 +6,7 @@ import 'package:himo/myappbar.dart';
 import 'package:himo/mybottomappbar.dart';
 import 'package:himo/orientationlayout.dart';
 import 'package:himo/therapy/therapy.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class TherapySetup extends StatefulWidget {
   const TherapySetup({Key? key}) : super(key: key);
@@ -16,6 +18,30 @@ class TherapySetup extends StatefulWidget {
 class _TherapySetupState extends State<TherapySetup> {
 
   static String selectedOrientation = 'left';
+  File? _selectedImage;
+
+  late SharedPreferences _prefs;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadImageFromPrefs();
+  }
+
+  Future<void> _initPrefs() async {
+    _prefs = await SharedPreferences.getInstance();
+  }
+
+  Future<void> _loadImageFromPrefs() async {
+    await _initPrefs();
+
+    String? imagePath = _prefs.getString('selectedImage');
+    if (imagePath != null) {
+      setState(() {
+        _selectedImage = File(imagePath);
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,10 +67,7 @@ class _TherapySetupState extends State<TherapySetup> {
           buttonText: 'Start',
           backgroundColor: Color(0xff636366),
           onPressed: (){
-            Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => Therapy())
-            );
+            _showConfirmationDialog();
           },
         ),
     );
@@ -207,6 +230,73 @@ class _TherapySetupState extends State<TherapySetup> {
           ),
         ),
       ),
+    );
+  }
+
+  void _showConfirmationDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Color(0xff3d3d3d),
+          title: Text(
+            'Last Calibration',
+            style: GoogleFonts.varelaRound(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              if (_selectedImage != null)
+                Container(
+                  constraints: BoxConstraints(maxHeight: 100),
+                  child: Image.file(
+                    _selectedImage!,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              SizedBox(height: 16),
+              Text(
+                'Make sure you are wearing the same sock as in this picture.',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.varelaRound(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w400,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: Text(
+                'Cancel',
+                style: TextStyle(color: Colors.white),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: Text(
+                'Confirm',
+                style: TextStyle(color: Colors.white),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => Therapy()),
+                );
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 }

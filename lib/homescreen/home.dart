@@ -5,6 +5,7 @@ import 'package:himo/calibration/calibration.dart';
 import 'package:himo/homescreen/background.dart';
 import 'package:himo/homescreen/textbutton.dart';
 import 'package:himo/therapy/therapysetup.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'iconbutton.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:himo/exercisesetup//exercisesetup.dart';
@@ -122,12 +123,32 @@ class MainPage extends StatelessWidget {
                                       secondIcon: Icons
                                           .computer_rounded,
                                       color: Colors.black26,
-                                      onPressed: () {
-                                        Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                                builder: (context) => TherapySetup())
-                                        );
+                                      onPressed: () async {
+                                        final SharedPreferences prefs = await SharedPreferences.getInstance();
+                                        int? selectedHue = prefs.getInt('selectedHue');
+
+                                        if (selectedHue != null) {
+                                          Navigator.push(
+                                              context,
+                                              MaterialPageRoute(builder: (context) => TherapySetup())
+                                          );
+                                        } else {
+                                          showDialog(
+                                            context: context,
+                                            builder: (context) => AlertDialog(
+                                              title: Text('Warning'),
+                                              content: Text('Please calibrate the app first.'),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed: () {
+                                                    Navigator.pop(context);
+                                                  },
+                                                  child: Text('OK'),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        }
                                       },
                                     ),
                                   ),

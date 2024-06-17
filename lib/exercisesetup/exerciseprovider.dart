@@ -49,7 +49,13 @@ Future<void> saveDefaultExercises(List<Exercise> exercises) async {
 Future<List<Exercise>> loadDefaultExercises() async {
   final SharedPreferences prefs = await SharedPreferences.getInstance();
   List<String> jsonExercises = prefs.getStringList('defaultExercises') ?? [];
-  return jsonExercises.map((jsonExercise) => Exercise.fromJson(json.decode(jsonExercise))).toList();
+  if (jsonExercises.isEmpty) {
+    List<Exercise> defaultExercises = getDefaultExercises(5);
+    await saveDefaultExercises(defaultExercises);
+    return defaultExercises;
+  } else {
+    return jsonExercises.map((jsonExercise) => Exercise.fromJson(json.decode(jsonExercise))).toList();
+  }
 }
 
 List<Exercise> getDefaultExercises(int repetition) {
