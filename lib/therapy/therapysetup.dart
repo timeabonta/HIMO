@@ -25,22 +25,35 @@ class _TherapySetupState extends State<TherapySetup> {
   @override
   void initState() {
     super.initState();
-    _loadImageFromPrefs();
+    _initPrefs();
   }
 
   Future<void> _initPrefs() async {
     _prefs = await SharedPreferences.getInstance();
+    _loadImageFromPrefs();
+    _loadOrientationFromPrefs();
   }
 
   Future<void> _loadImageFromPrefs() async {
-    await _initPrefs();
-
     String? imagePath = _prefs.getString('selectedImage');
     if (imagePath != null) {
       setState(() {
         _selectedImage = File(imagePath);
       });
     }
+  }
+
+  Future<void> _loadOrientationFromPrefs() async {
+    String? orientation = _prefs.getString('selectedOrientation');
+    if (orientation != null) {
+      setState(() {
+        selectedOrientation = orientation;
+      });
+    }
+  }
+
+  Future<void> _saveOrientationToPrefs(String orientation) async {
+    await _prefs.setString('selectedOrientation', orientation);
   }
 
   @override
@@ -211,6 +224,7 @@ class _TherapySetupState extends State<TherapySetup> {
         onPressed: () {
           setState(() {
             selectedOrientation = orientation;
+            _saveOrientationToPrefs(orientation);
           });
         },
         style: ElevatedButton.styleFrom(

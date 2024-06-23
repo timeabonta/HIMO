@@ -85,6 +85,7 @@ flutter:
      - assets/finished.mp3
      - assets/keepgoing.mp3
      - assets/goodjob.mp3
+     - assets/5s.mp3
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see

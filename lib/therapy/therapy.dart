@@ -45,6 +45,7 @@ class _TherapyState extends State<Therapy> with WidgetsBindingObserver{
   int _remainedHoldDuration = 0;
   bool _exerciseAnnounced = false;
   bool _secondAudioPlayed = false;
+  String selectedOrientation = 'left';
 
   @override
   void initState(){
@@ -53,7 +54,13 @@ class _TherapyState extends State<Therapy> with WidgetsBindingObserver{
     _colorDetector = ColorDetectorAsync();
     initCamera();
     loadSelectedExercises();
+    _loadSelectedOrientation();
     startCountdown();
+  }
+
+  Future<void> _loadSelectedOrientation() async {
+    final prefs = await SharedPreferences.getInstance();
+    selectedOrientation = prefs.getString('selectedOrientation') ?? 'left';
   }
 
   @override
@@ -210,15 +217,31 @@ class _TherapyState extends State<Therapy> with WidgetsBindingObserver{
     var timeDiff = current.timestamp.difference(previous.timestamp).inMilliseconds;
 
     // Szélesség és magasság változása a két bounding box között
-    double widthChange = (current.boundingBox[2] - current.boundingBox[0]).abs() - (previous.boundingBox[2] - previous.boundingBox[0]).abs();
-    double heightChange = (current.boundingBox[3] - current.boundingBox[1]).abs() - (previous.boundingBox[3] - previous.boundingBox[1]).abs();
+    double previousWidth = (previous.boundingBox[2] - previous.boundingBox[0]).abs();
+    double previousHeight = (previous.boundingBox[3] - previous.boundingBox[1]).abs();
+    double currentWidth = (current.boundingBox[2] - current.boundingBox[0]).abs();
+    double currentHeight = (current.boundingBox[3] - current.boundingBox[1]).abs();
+
+    double widthChange = currentWidth - previousWidth;
+    double heightChange = currentHeight - previousHeight;
+
+    // Szélesség és magasság változásának százalékos aránya
+    double widthChangePercentage = (widthChange / previousWidth) * 100;
+    double heightChangePercentage = (heightChange / previousHeight) * 100;
 
     // A változás sebessége, amit a magasság és a szélesség változásából számolunk, időegységre normálva
-    double heightChangeRate = heightChange / timeDiff;
-    double widthChangeRate = widthChange / timeDiff;
+    double heightChangeRate = heightChangePercentage / timeDiff;
+    double widthChangeRate = widthChangePercentage / timeDiff;
+
+
+    // Alsó és bal szél változásának százalékos aránya
+    double topChange = (current.boundingBox[3] - previous.boundingBox[3]);
+    double bottomChange = (current.boundingBox[1] - previous.boundingBox[1]);
+    double leftChange = (current.boundingBox[0] - previous.boundingBox[0]);
+    double rightChange = (current.boundingBox[2] - previous.boundingBox[2]);
 
     // Hibakezelés: Ha a változások túl nagyok, lehet, hogy hiba történt
-    if ((widthChange).abs() > 100 || (heightChange).abs() > 100) {
+    if ((widthChangePercentage).abs() > 100 || (heightChangePercentage).abs() > 100) {
       currentMovement.setState(MovementState.idle);
       boundingBoxHistory.clear();
       print("Hiba: értelmetlen adatok érzékelve, állapot visszaállítása");
@@ -228,19 +251,19 @@ class _TherapyState extends State<Therapy> with WidgetsBindingObserver{
     // Állapotgép logika a mozgás típusának azonosítására
     switch (currentMovement.state) {
       case MovementState.idle:
-        if (heightChange > 10 && heightChangeRate > 0.3) {
+        if (heightChangePercentage > 8 && heightChangeRate > 0.05 && (bottomChange).abs() < 5 && ((selectedOrientation == 'left' && rightChange.abs() < 5) || (selectedOrientation == 'right' && leftChange.abs() < 5))) {
           currentMovement.setState(MovementState.toeRising);
           print("Lábujjhegyre állás kezdete");
-        } else if (widthChange < -5 && widthChangeRate < -0.05 && (heightChangeRate).abs() < 0.05) {
+        } else if (widthChangePercentage < -2 && widthChangeRate < -0.02 && (heightChangeRate).abs() < 0.07 && (bottomChange).abs() < 5 && ((selectedOrientation == 'left' && leftChange.abs() < 5) || (selectedOrientation == 'right' && rightChange.abs() < 5))) {
           currentMovement.setState(MovementState.toesContracting);
           print("Lábujjhegyek behúzása");
         }
         break;
       case MovementState.toeRising:
-        if (heightChange < -10 && heightChangeRate < -0.1) {
+        if (heightChangePercentage < -3 && heightChangeRate < -0.1 && (bottomChange).abs() < 5 && ((selectedOrientation == 'left' && rightChange.abs() < 5) || (selectedOrientation == 'right' && leftChange.abs() < 5))) {
           currentMovement.setState(MovementState.toeFalling);
           print("Lábujjhegy állás vége, visszatérés a talajra");
-        } else if ((heightChangeRate).abs() < 0.05) {
+        } else if ((heightChangeRate).abs() < 0.05 && (bottomChange).abs() < 5 && ((selectedOrientation == 'left' && rightChange.abs() < 5) || (selectedOrientation == 'right' && leftChange.abs() < 5))) {
           currentMovement.setState(MovementState.toeHeld);
           print("Lábujjhegyen maradva");
         }
@@ -260,7 +283,7 @@ class _TherapyState extends State<Therapy> with WidgetsBindingObserver{
         }
         break;
       case MovementState.toeHeld:
-        if (heightChange < -10 && heightChangeRate < -0.1) {
+        if (heightChangePercentage < -3 && heightChangeRate < -0.1 && (bottomChange).abs() < 5 && ((selectedOrientation == 'left' && rightChange.abs() < 5) || (selectedOrientation == 'right' && leftChange.abs() < 5))) {
           currentMovement.setState(MovementState.toeFalling);
           print("Lábujjhegy állás vége, visszatérés a talajra");
           if(_exercises[_currentExerciseIndex].name == "ToeStand"){
@@ -300,7 +323,7 @@ class _TherapyState extends State<Therapy> with WidgetsBindingObserver{
         }
         break;
       case MovementState.toesContracting:
-        if (widthChange > 5 && widthChangeRate > 0.05) {
+        if (widthChangePercentage > 2 && widthChangeRate > 0.02 && (bottomChange).abs() < 5 && ((selectedOrientation == 'left' && leftChange.abs() < 5) || (selectedOrientation == 'right' && rightChange.abs() < 5))) {
           currentMovement.setState(MovementState.toesExpanding);
           print("Lábujjhegyek behúzás vége, visszatérés az eredeti pozícióra");
         }
